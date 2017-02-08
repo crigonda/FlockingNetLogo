@@ -132,6 +132,7 @@ end
 ;; ======================================================================
 
 to-report find-flockmates  ;; turtle procedure
+
   report other turtles in-radius vision
 end
 
