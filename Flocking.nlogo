@@ -40,12 +40,6 @@ to flock  ;; turtle procedure
   let neighbours find-flockmates
   ifelse any? neighbours [applyForces neighbours]
   [wander]
-  ;;if any? flockmates
-  ;;  [ find-nearest-neighbor
-  ;;    ifelse distance nearest-neighbor < minimum-separation
-  ;;      [ separate ]
-  ;;      [ align
-  ;;        cohere ] ]
 end
 
 ;; ======================================================================
@@ -98,30 +92,15 @@ to applyForces [neighbours] ;; turtle procedure
   ;; UNUSED
   ;;set heading (computeDirection xTotal yTotal)
   ;; Make the turtle move in the right direction
-  ifelse norm < maxSpeed
-    [ set intensity norm ]
-    [ set intensity maxSpeed ]
+  if norm > maxSpeed
+  [set norm maxSpeed]
+  if norm < 0.8
+  [set norm 0.8]
+  set intensity norm
 end
-;; ======================================================================
-
-;; DUST & UNDUST
 
 to wander ;; turtle procedure
   set intensity 0.5
-end
-
-to dust
-  let rand random 100
-
-   if pcolor = black and rand < 1 [
-     set pcolor gray
-   ]
-end
-
-to undust
-  if pcolor = gray [
-    set pcolor black
-  ]
 end
 
 ;; Gets the direction from a vector
@@ -168,6 +147,25 @@ to smoothTurn [newDirection] ;; turtle procedure
   ]
   [rt turn]
 end
+
+;; ======================================================================
+
+;; DUST & UNDUST
+
+to dust
+  let rand random dustProbability
+  if pcolor = black and rand < 1 [
+    set pcolor gray
+  ]
+end
+
+to undust
+  if pcolor = gray [
+    set pcolor black
+  ]
+end
+
+;; ======================================================================
 @#$#@#$#@
 GRAPHICS-WINDOW
 250
@@ -239,7 +237,7 @@ population
 population
 10
 500.0
-170.0
+100.0
 10
 1
 NIL
@@ -247,9 +245,9 @@ HORIZONTAL
 
 SLIDER
 35
-265
+299
 207
-298
+332
 repulsionFactor
 repulsionFactor
 1
@@ -262,14 +260,14 @@ HORIZONTAL
 
 SLIDER
 35
-297
+331
 207
-330
+364
 alignmentFactor
 alignmentFactor
 1
 3
-1.0
+2.0
 0.1
 1
 NIL
@@ -277,14 +275,14 @@ HORIZONTAL
 
 SLIDER
 35
-330
+364
 207
-363
+397
 cohesionFactor
 cohesionFactor
 1
 3
-1.0
+2.0
 0.1
 1
 NIL
@@ -314,7 +312,7 @@ maxTurn
 maxTurn
 0
 360
-90.0
+15.0
 5
 1
 NIL
@@ -331,6 +329,21 @@ maxSpeed
 5
 2.0
 0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+9
+234
+232
+267
+dustProbability
+dustProbability
+1000
+10000
+10000.0
+1000
 1
 NIL
 HORIZONTAL
