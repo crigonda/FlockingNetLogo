@@ -11,19 +11,13 @@ turtles-own [
   ;; =======================================================
 ]
 
-globals [
-  maxSpeed
-]
-
 to setup
   clear-all
   create-turtles population
     [ set color yellow - 2 + random 7  ;; random shades look nice
       set size 1.5  ;; easier to see
       setxy random-xcor random-ycor
-      ;;set flockmates no-turtles
     ]
-  set maxSpeed 2
   reset-ticks
 end
 
@@ -38,8 +32,6 @@ to go
   tick
 end
 
-
-;; TODO : use forces instead
 to flock  ;; turtle procedure
   let neighbours find-flockmates
   ifelse any? neighbours [applyForces neighbours]
@@ -67,8 +59,8 @@ end
 
 to alignmentForce [neighbours] ;; turtle procedure
   let direction 0
-  let x-component mean [sin (towards myself + 180)] of neighbours
-  let y-component mean [cos (towards myself + 180)] of neighbours
+  let x-component mean [sin (towards myself)] of neighbours
+  let y-component mean [cos (towards myself)] of neighbours
   ifelse x-component = 0 and y-component = 0
     [ set direction heading ]
     [ set direction atan x-component y-component ]
@@ -90,19 +82,17 @@ end
 ;; FORCES APPLICATION
 
 to applyForces [neighbours] ;; turtle procedure
-  ;;user-message ("Beginning of force computing !")
   repulsionForce neighbours
-  ;;user-message ("After repulsion !")
   alignmentForce neighbours
-  ;;user-message ("After alignment !")
   cohesionForce neighbours
-  ;;user-message ("After cohesion !")
   ;; Sum of the 3 vectors
   let xTotal (repulsionFactor * xRepulsion + alignmentFactor * xAlignment + cohesionFactor * xCohesion)
   let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion)
   ;; Computes the direction and the norm of the vector
   let norm (sqrt (xTotal ^ 2 + yTotal ^ 2))
-  set heading (computeDirection xTotal yTotal)
+  smoothTurn (computeDirection xTotal yTotal)
+  ;; UNUSED
+  ;;set heading (computeDirection xTotal yTotal)
   ;; Make the turtle move in the right direction
   ifelse norm < maxSpeed
     [ set intensity norm ]
@@ -110,7 +100,7 @@ to applyForces [neighbours] ;; turtle procedure
 end
 
 to wander ;; turtle procedure
-  set intensity 1
+  set intensity 0.5
 end
 
 ;; Gets the direction from a vector
@@ -118,7 +108,7 @@ to-report computeDirection [x y]
   let direction 0
   let angle 0
   ;; Right upper part
-  if x >= 0 and y >= 0 [
+  if x >= 0 and y > 0 [
     set angle y / (sqrt (x ^ 2 + y ^ 2))
     set direction (acos angle)
   ]
@@ -142,8 +132,20 @@ end
 
 ;; ======================================================================
 
-to-report find-flockmates  ;; turtle procedure
+;; HELPER PROCEDURES
+
+to-report find-flockmates ;; turtle procedure
   report other turtles in-radius vision
+end
+
+to smoothTurn [newDirection] ;; turtle procedure
+  let turn (newDirection - heading)
+  ifelse abs turn > maxTurn [
+    ifelse turn > 0
+    [rt maxTurn]
+    [lt maxTurn]
+  ]
+  [rt turn]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -174,12 +176,12 @@ ticks
 30.0
 
 BUTTON
-39
+31
 93
-116
+112
 126
-NIL
 setup
+setup\nset maxSpeed 2
 NIL
 1
 T
@@ -214,23 +216,23 @@ SLIDER
 84
 population
 population
-1.0
-1000.0
+10
+500.0
 300.0
-1.0
+10
 1
 NIL
 HORIZONTAL
 
 SLIDER
 35
-188
+265
 207
-221
+298
 repulsionFactor
 repulsionFactor
 1
-5
+3
 1.0
 0.1
 1
@@ -239,13 +241,13 @@ HORIZONTAL
 
 SLIDER
 35
-220
+297
 207
-253
+330
 alignmentFactor
 alignmentFactor
 1
-5
+3
 1.0
 0.1
 1
@@ -254,14 +256,14 @@ HORIZONTAL
 
 SLIDER
 35
-253
+330
 207
-286
+363
 cohesionFactor
 cohesionFactor
 1
-5
-1.0
+3
+2.0
 0.1
 1
 NIL
@@ -280,6 +282,36 @@ vision
 0.5
 1
 patches
+HORIZONTAL
+
+SLIDER
+9
+201
+232
+234
+maxTurn
+maxTurn
+0
+360
+175.0
+5
+1
+NIL
+HORIZONTAL
+
+SLIDER
+9
+168
+232
+201
+maxSpeed
+maxSpeed
+1
+5
+2.0
+0.1
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@
