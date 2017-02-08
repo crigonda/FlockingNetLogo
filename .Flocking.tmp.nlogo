@@ -53,8 +53,8 @@ to repulsionForce [neighbours] ;; turtle procedure
   let xTurtle xcor
   let yTurtle ycor
   let currentTurtle self
-  set xRepulsion sum [(1 / (distance currentTurtle + 0.1)) * (xTurtle - xcor)] of neighbours
-  set yRepulsion sum [(1 / (distance currentTurtle + 0.1)) * (yTurtle - ycor)] of neighbours
+  set xRepulsion sum [(1 / (distance currentTurtle + 01)) * (xTurtle - xcor)] of neighbours
+  set yRepulsion sum [(1 / (distance currentTurtle + 1)) * (yTurtle - ycor)] of neighbours
 end
 
 to alignmentForce [neighbours] ;; turtle procedure
@@ -218,7 +218,7 @@ population
 population
 10
 500.0
-150.0
+300.0
 10
 1
 NIL
@@ -293,7 +293,7 @@ maxTurn
 maxTurn
 0
 360
-90.0
+175.0
 5
 1
 NIL
