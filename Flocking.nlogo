@@ -1,12 +1,18 @@
 turtles-own [
-  flockmates         ;; UNUSED !! agentset of nearby turtles
   nearest-neighbor   ;; closest one of our flockmates
+  ;; =======================================================
   xRepulsion         ;; x component of the repulsion force
   yRepulsion         ;; y component of the repulsion force
   xAlignment         ;; x component of the alignment force
   yAlignment         ;; y component of the alignment force
   xCohesion          ;; x component of the cohesion force
   yCohesion          ;; y component of the cohesion force
+  intensity          ;; Intensity of the total force
+  ;; =======================================================
+]
+
+globals [
+  maxSpeed
 ]
 
 to setup
@@ -15,8 +21,9 @@ to setup
     [ set color yellow - 2 + random 7  ;; random shades look nice
       set size 1.5  ;; easier to see
       setxy random-xcor random-ycor
-      set flockmates no-turtles
+      ;;set flockmates no-turtles
     ]
+  set maxSpeed 2
   reset-ticks
 end
 
@@ -24,7 +31,7 @@ to go
   ask turtles [ flock ]
   ;; the following line is used to make the turtles
   ;; animate more smoothly.
-  ;;repeat 5 [ ask turtles [ fd 0.2 ] display ]
+  repeat 5 [ ask turtles [ fd (intensity / 5) ] display ]
   ;; for greater efficiency, at the expense of smooth
   ;; animation, substitute the following line instead:
   ;;   ask turtles [ fd 1 ]
@@ -35,10 +42,7 @@ end
 ;; TODO : use forces instead
 to flock  ;; turtle procedure
   let neighbours find-flockmates
-  ifelse any? flockmates [
-    user-message ("Flockmates found !")
-    applyForces neighbours
-  ]
+  ifelse any? neighbours [applyForces neighbours]
   [wander]
   ;;if any? flockmates
   ;;  [ find-nearest-neighbor
@@ -57,8 +61,8 @@ to repulsionForce [neighbours] ;; turtle procedure
   let xTurtle xcor
   let yTurtle ycor
   let currentTurtle self
-  set xRepulsion sum [(1 / (distance currentTurtle)) * (xTurtle - xcor)] of neighbours
-  set yRepulsion sum [(1 / (distance currentTurtle)) * (yTurtle - ycor)] of neighbours
+  set xRepulsion sum [(1 / (distance currentTurtle + 1)) * (xTurtle - xcor)] of neighbours
+  set yRepulsion sum [(1 / (distance currentTurtle + 1)) * (yTurtle - ycor)] of neighbours
 end
 
 to alignmentForce [neighbours] ;; turtle procedure
@@ -68,8 +72,8 @@ to alignmentForce [neighbours] ;; turtle procedure
   ifelse x-component = 0 and y-component = 0
     [ set direction heading ]
     [ set direction atan x-component y-component ]
-  set xAlignment (asin direction)
-  set yAlignment (acos direction)
+  set xAlignment sin direction
+  set yAlignment cos direction
 end
 
 to cohesionForce [neighbours] ;; turtle procedure
@@ -86,20 +90,27 @@ end
 ;; FORCES APPLICATION
 
 to applyForces [neighbours] ;; turtle procedure
+  ;;user-message ("Beginning of force computing !")
   repulsionForce neighbours
+  ;;user-message ("After repulsion !")
   alignmentForce neighbours
+  ;;user-message ("After alignment !")
   cohesionForce neighbours
+  ;;user-message ("After cohesion !")
   ;; Sum of the 3 vectors
   let xTotal (repulsionFactor * xRepulsion + alignmentFactor * xAlignment + cohesionFactor * xCohesion)
   let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion)
   ;; Computes the direction and the norm of the vector
   let norm (sqrt (xTotal ^ 2 + yTotal ^ 2))
   set heading (computeDirection xTotal yTotal)
-  fd norm
+  ;; Make the turtle move in the right direction
+  ifelse norm < maxSpeed
+    [ set intensity norm ]
+    [ set intensity maxSpeed ]
 end
 
-to wander
-
+to wander ;; turtle procedure
+  set intensity 1
 end
 
 ;; Gets the direction from a vector
@@ -134,78 +145,6 @@ end
 to-report find-flockmates  ;; turtle procedure
   report other turtles in-radius vision
 end
-
-;;to find-flockmates  ;; turtle procedure
-;;  set flockmates other turtles in-radius vision
-;;end
-
-to find-nearest-neighbor ;; turtle procedure
-  set nearest-neighbor min-one-of flockmates [distance myself]
-end
-
-;;; SEPARATE
-
-to separate  ;; turtle procedure
-  turn-away ([heading] of nearest-neighbor) max-separate-turn
-end
-
-;;; ALIGN
-
-to align  ;; turtle procedure
-  turn-towards average-flockmate-heading max-align-turn
-end
-
-to-report average-flockmate-heading  ;; turtle procedure
-  ;; We can't just average the heading variables here.
-  ;; For example, the average of 1 and 359 should be 0,
-  ;; not 180.  So we have to use trigonometry.
-  let x-component sum [dx] of flockmates
-  let y-component sum [dy] of flockmates
-  ifelse x-component = 0 and y-component = 0
-    [ report heading ]
-    [ report atan x-component y-component ]
-end
-
-;;; COHERE
-
-to cohere  ;; turtle procedure
-  turn-towards average-heading-towards-flockmates max-cohere-turn
-end
-
-to-report average-heading-towards-flockmates  ;; turtle procedure
-  ;; "towards myself" gives us the heading from the other turtle
-  ;; to me, but we want the heading from me to the other turtle,
-  ;; so we add 180
-  let x-component mean [sin (towards myself + 180)] of flockmates
-  let y-component mean [cos (towards myself + 180)] of flockmates
-  ifelse x-component = 0 and y-component = 0
-    [ report heading ]
-    [ report atan x-component y-component ]
-end
-
-;;; HELPER PROCEDURES
-
-to turn-towards [new-heading max-turn]  ;; turtle procedure
-  turn-at-most (subtract-headings new-heading heading) max-turn
-end
-
-to turn-away [new-heading max-turn]  ;; turtle procedure
-  turn-at-most (subtract-headings heading new-heading) max-turn
-end
-
-;; turn right by "turn" degrees (or left if "turn" is negative),
-;; but never turn more than "max-turn" degrees
-to turn-at-most [turn max-turn]  ;; turtle procedure
-  ifelse abs turn > max-turn
-    [ ifelse turn > 0
-        [ rt max-turn ]
-        [ lt max-turn ] ]
-    [ rt turn ]
-end
-
-
-; Copyright 1998 Uri Wilensky.
-; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
 250
@@ -284,48 +223,48 @@ NIL
 HORIZONTAL
 
 SLIDER
-4
-217
-237
-250
-max-align-turn
-max-align-turn
-0.0
-20.0
-5.0
-0.25
+35
+188
+207
+221
+repulsionFactor
+repulsionFactor
 1
-degrees
+5
+1.0
+0.1
+1
+NIL
 HORIZONTAL
 
 SLIDER
-4
-251
-237
-284
-max-cohere-turn
-max-cohere-turn
-0.0
-20.0
-3.0
-0.25
+35
+220
+207
+253
+alignmentFactor
+alignmentFactor
 1
-degrees
+5
+1.0
+0.1
+1
+NIL
 HORIZONTAL
 
 SLIDER
-4
-285
-237
-318
-max-separate-turn
-max-separate-turn
-0.0
-20.0
-1.5
-0.25
+35
+253
+207
+286
+cohesionFactor
+cohesionFactor
 1
-degrees
+5
+1.0
+0.1
+1
+NIL
 HORIZONTAL
 
 SLIDER
@@ -341,66 +280,6 @@ vision
 0.5
 1
 patches
-HORIZONTAL
-
-SLIDER
-9
-169
-232
-202
-minimum-separation
-minimum-separation
-0.0
-5.0
-1.0
-0.25
-1
-patches
-HORIZONTAL
-
-SLIDER
-34
-347
-206
-380
-repulsionFactor
-repulsionFactor
-1
-10
-1.0
-0.5
-1
-NIL
-HORIZONTAL
-
-SLIDER
-34
-379
-206
-412
-alignmentFactor
-alignmentFactor
-1
-10
-1.0
-0.5
-1
-NIL
-HORIZONTAL
-
-SLIDER
-34
-412
-206
-445
-cohesionFactor
-cohesionFactor
-1
-10
-1.0
-0.5
-1
-NIL
 HORIZONTAL
 
 @#$#@#$#@
