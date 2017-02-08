@@ -22,13 +22,17 @@ to setup
 end
 
 to go
-  ask turtles [ flock ]
+  ask turtles [
+    flock
+    undust
+  ]
   ;; the following line is used to make the turtles
   ;; animate more smoothly.
   repeat 5 [ ask turtles [ fd (intensity / 5) ] display ]
   ;; for greater efficiency, at the expense of smooth
   ;; animation, substitute the following line instead:
   ;;   ask turtles [ fd 1 ]
+  ask patches [ dust ]
   tick
 end
 
@@ -98,9 +102,26 @@ to applyForces [neighbours] ;; turtle procedure
     [ set intensity norm ]
     [ set intensity maxSpeed ]
 end
+;; ======================================================================
+
+;; DUST & UNDUST
 
 to wander ;; turtle procedure
   set intensity 0.5
+end
+
+to dust
+  let rand random 100
+
+   if pcolor = black and rand < 1 [
+     set pcolor gray
+   ]
+end
+
+to undust
+  if pcolor = gray [
+    set pcolor black
+  ]
 end
 
 ;; Gets the direction from a vector
@@ -218,7 +239,7 @@ population
 population
 10
 500.0
-150.0
+170.0
 10
 1
 NIL
@@ -263,7 +284,7 @@ cohesionFactor
 cohesionFactor
 1
 3
-2.0
+1.0
 0.1
 1
 NIL
