@@ -142,14 +142,15 @@ to-report find-flockmates ;; turtle procedure
   let refTurtle self
   ;; Getting the turtles in a given radius
   let neighbours other turtles in-radius visionDistance
-  ;;inspect self
-  ;;user-message(word "Number in radius : " count neighbours)
+  inspect self
+  user-message(word "Number in radius : " count neighbours)
   ;; Then keeping only the ones in the sight field
   let newNeighbours neighbours with [
     subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
   ]
-  ;;user-message(word "Number in sight : " count newNeighbours)
-  ;;stop-inspecting self
+  user-message(word "Number in sight : " count newNeighbours)
+  stop-inspecting self
+  ;; report (other turtles with [abs (towards myself) <= visionAngle]) in-radius visionDistance
   report newNeighbours
   ;; ============================================
 end
