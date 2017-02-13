@@ -1,6 +1,8 @@
 turtles-own [
   nearest-neighbor   ;; closest one of our flockmates
   ;; =======================================================
+  xMomentum          ;; x component of the momentum force
+  yMomentum          ;; y component of the momentum force
   xRepulsion         ;; x component of the repulsion force
   yRepulsion         ;; y component of the repulsion force
   xAlignment         ;; x component of the alignment force
@@ -13,6 +15,7 @@ turtles-own [
 
 to setup
   clear-all
+  set minSpeed 0.5
   create-turtles population
     [ set color yellow - 2 + random 7  ;; random shades look nice
       set size 1.5  ;; easier to see
@@ -46,6 +49,11 @@ end
 
 ;;; FORCE COMPUTATION
 
+to momentumForce ;; turtle procedure
+  set xMomentum sin heading
+  set yMomentum cos heading
+end
+
 to repulsionForce [neighbours] ;; turtle procedure
   ;; Position of the current turtle
   let xTurtle xcor
@@ -57,11 +65,22 @@ end
 
 to alignmentForce [neighbours] ;; turtle procedure
   let direction 0
-  let x-component mean [sin (towards myself)] of neighbours
-  let y-component mean [cos (towards myself)] of neighbours
+
+
+  ;;let x-component mean [sin (towards myself)] of neighbours
+  ;;let y-component mean [cos (towards myself)] of neighbours
+  ;;ifelse x-component = 0 and y-component = 0
+  ;;  [ set direction heading ]
+  ;;  [ set direction atan x-component y-component ]
+
+  let x-component sum [dx] of neighbours
+  let y-component sum [dy] of neighbours
   ifelse x-component = 0 and y-component = 0
-    [ set direction heading ]
-    [ set direction atan x-component y-component ]
+    [  heading ]
+    [ report atan x-component y-component ]
+
+
+
   set xAlignment sin direction
   set yAlignment cos direction
 end
@@ -92,18 +111,18 @@ to applyForces [neighbours] ;; turtle procedure
   ;; Make the turtle move in the right direction
   if norm > maxSpeed
   [set norm maxSpeed]
-  if norm < 0.8
-  [set norm 0.8]
+  if norm < minSpeed
+  [set norm minSpeed]
   set intensity norm
 end
 
 to wander ;; turtle procedure
-  set intensity 0.5
+  set intensity minSpeed
 end
 
 ;; Gets the direction from a vector
 to-report computeDirection [x y]
-  let direction 0
+  let direction -1
   let angle 0
   ;; Right upper part
   if x >= 0 and y > 0 [
@@ -142,27 +161,28 @@ to-report find-flockmates ;; turtle procedure
   let refTurtle self
   ;; Getting the turtles in a given radius
   let neighbours other turtles in-radius visionDistance
-  inspect self
-  user-message(word "Number in radius : " count neighbours)
+  ;;inspect self
+  ;;user-message(word "Number in radius : " count neighbours)
   ;; Then keeping only the ones in the sight field
   let newNeighbours neighbours with [
     subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
   ]
-  user-message(word "Number in sight : " count newNeighbours)
-  stop-inspecting self
-  ;; report (other turtles with [abs (towards myself) <= visionAngle]) in-radius visionDistance
+  ;;user-message(word "Number in sight : " count newNeighbours)
+  ;;stop-inspecting self
   report newNeighbours
   ;; ============================================
 end
 
 to smoothTurn [newDirection] ;; turtle procedure
-  let turn (subtract-headings newDirection heading)
-  ifelse abs turn > maxTurn [
-    ifelse turn > 0
-    [rt maxTurn]
-    [lt maxTurn]
+  if newDirection >= 0 [
+    let turn (subtract-headings newDirection heading)
+    ifelse abs turn > maxTurn [
+      ifelse turn > 0
+      [rt maxTurn]
+      [lt maxTurn]
+    ]
+    [rt turn]
   ]
-  [rt turn]
 end
 
 ;; ======================================================================
@@ -217,7 +237,7 @@ BUTTON
 112
 126
 setup
-setup\nset maxSpeed 1
+setup\nset minSpeed 0.5\nset maxSpeed 1
 NIL
 1
 T
@@ -254,20 +274,20 @@ population
 population
 10
 500.0
-150.0
+100.0
 10
 1
 NIL
 HORIZONTAL
 
 SLIDER
-36
-348
-208
-381
+35
+369
+207
+402
 repulsionFactor
 repulsionFactor
-1
+0
 3
 1.0
 0.1
@@ -276,30 +296,30 @@ NIL
 HORIZONTAL
 
 SLIDER
-36
-380
-208
-413
+35
+401
+207
+434
 alignmentFactor
 alignmentFactor
-1
+0
 3
-1.9
+1.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-36
-413
-208
-446
+35
+434
+207
+467
 cohesionFactor
 cohesionFactor
-1
+0
 3
-2.0
+1.5
 0.1
 1
 NIL
@@ -314,7 +334,7 @@ visionDistance
 visionDistance
 0.0
 10.0
-3.0
+4.0
 0.5
 1
 patches
@@ -322,9 +342,9 @@ HORIZONTAL
 
 SLIDER
 9
-234
-232
 267
+232
+300
 maxTurn
 maxTurn
 0
@@ -337,14 +357,14 @@ HORIZONTAL
 
 SLIDER
 9
-201
-232
 234
+232
+267
 maxSpeed
 maxSpeed
 0.5
 3
-1.0
+0.8
 0.1
 1
 NIL
@@ -352,9 +372,9 @@ HORIZONTAL
 
 SLIDER
 9
-267
-232
 300
+232
+333
 dustProbability
 dustProbability
 1000
@@ -394,6 +414,21 @@ visionAngle
 180
 110.0
 10
+1
+NIL
+HORIZONTAL
+
+SLIDER
+9
+201
+232
+234
+minSpeed
+minSpeed
+0.1
+0.5
+0.5
+0.1
 1
 NIL
 HORIZONTAL
