@@ -1,8 +1,7 @@
 turtles-own [
   nearest-neighbor   ;; closest one of our flockmates
   ;; =======================================================
-  xMomentum          ;; x component of the momentum force
-  yMomentum          ;; y component of the momentum force
+
   xRepulsion         ;; x component of the repulsion force
   yRepulsion         ;; y component of the repulsion force
   xAlignment         ;; x component of the alignment force
@@ -65,22 +64,11 @@ end
 
 to alignmentForce [neighbours] ;; turtle procedure
   let direction 0
-
-
-  ;;let x-component mean [sin (towards myself)] of neighbours
-  ;;let y-component mean [cos (towards myself)] of neighbours
-  ;;ifelse x-component = 0 and y-component = 0
-  ;;  [ set direction heading ]
-  ;;  [ set direction atan x-component y-component ]
-
   let x-component sum [dx] of neighbours
   let y-component sum [dy] of neighbours
   ifelse x-component = 0 and y-component = 0
-    [  heading ]
-    [ report atan x-component y-component ]
-
-
-
+    [ set direction heading ]
+    [ set direction atan x-component y-component ]
   set xAlignment sin direction
   set yAlignment cos direction
 end
@@ -304,7 +292,7 @@ alignmentFactor
 alignmentFactor
 0
 3
-1.0
+1.5
 0.1
 1
 NIL
@@ -364,7 +352,7 @@ maxSpeed
 maxSpeed
 0.5
 3
-0.8
+1.0
 0.1
 1
 NIL
@@ -412,7 +400,7 @@ visionAngle
 visionAngle
 0
 180
-110.0
+90.0
 10
 1
 NIL
