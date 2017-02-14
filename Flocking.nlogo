@@ -7,6 +7,8 @@ turtles-own [
   yAlignment         ;; y component of the alignment force
   xCohesion          ;; x component of the cohesion force
   yCohesion          ;; y component of the cohesion force
+  xPickUp            ;; x component of the object attraction force
+  yPickUp            ;; y component of the object attraction force
   intensity          ;; Intensity of the total force
   ;; =======================================================
 ]
@@ -82,6 +84,20 @@ to cohesionForce [neighbours] ;; turtle procedure
   set yCohesion (yGravity - ycor)
 end
 
+to pickUpForce [neighbours] ;; turtle procedure
+  ;; The agent is attracted by the closest object
+  let objectives find-objectives
+  ifelse any? objectives [
+    let objective min-one-of objectives [distance myself]
+    ;; Computes the attraction vector exerted by the object
+    set xPickUp ([pxcor] of objective - xcor)
+    set yPickUp ([pycor] of objective - ycor)
+  ] [
+    set xPickUp 0
+    set yPickUp 0
+  ]
+end
+
 ;; ======================================================================
 
 ;; FORCES APPLICATION
@@ -90,9 +106,10 @@ to applyForces [neighbours] ;; turtle procedure
   repulsionForce neighbours
   alignmentForce neighbours
   cohesionForce neighbours
-  ;; Sum of the 3 vectors
-  let xTotal (repulsionFactor * xRepulsion + alignmentFactor * xAlignment + cohesionFactor * xCohesion)
-  let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion)
+  pickUpForce find-objectives
+  ;; Sum of the 3 vectors (plus the pick up force)
+  let xTotal (repulsionFactor * xRepulsion + alignmentFactor * xAlignment + cohesionFactor * xCohesion + pickUpFactor * xPickUp)
+  let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion + pickUpFactor * yPickUp)
   ;; Computes the direction and the norm of the vector
   let norm (sqrt (xTotal ^ 2 + yTotal ^ 2))
   smoothTurn (computeDirection xTotal yTotal)
@@ -169,6 +186,18 @@ to smoothTurn [newDirection] ;; turtle procedure
   ]
 end
 
+to-report find-objectives ;; turtle procedure
+  let refHeading heading
+  let refTurtle self
+  ;; Getting the patches with objects in a given radius
+  let objectives other patches in-radius visionDistance with [pcolor = objectColor]
+  ;; Then keeping only the ones in the sight field
+  let objectivesInSight objectives with [
+    subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
+  ]
+  report objectivesInSight
+end
+
 ;; ======================================================================
 
 ;; CREATE AND REMOVE OBJECTS
@@ -187,7 +216,7 @@ to createObjects ;; observer procedure
 end
 
 to addObject ;; patch procedure
-  let rand random (50000 * (1 / objectProbability))
+  let rand random (100000 * (1 / objectProbability))
   if rand < 1 [
     set pcolor objectColor
   ]
@@ -210,10 +239,10 @@ end
 ;; ======================================================================
 @#$#@#$#@
 GRAPHICS-WINDOW
-267
-27
-772
-533
+276
+49
+781
+555
 -1
 -1
 7.0
@@ -242,7 +271,7 @@ BUTTON
 120
 193
 setup
-setup\nset minSpeed 0.5\nset maxSpeed 1
+setup\nset minSpeed 0.5\nset maxSpeed 1\nset objectProbability 0
 NIL
 1
 T
@@ -294,7 +323,7 @@ repulsionFactor
 repulsionFactor
 0
 5
-1.5
+2.0
 0.1
 1
 NIL
@@ -354,7 +383,7 @@ maxTurn
 maxTurn
 0
 360
-15.0
+20.0
 5
 1
 NIL
@@ -384,7 +413,7 @@ objectProbability
 objectProbability
 0
 20
-3.0
+2.0
 1
 1
 NIL
@@ -417,7 +446,7 @@ visionAngle
 visionAngle
 0
 180
-90.0
+100.0
 10
 1
 NIL
@@ -476,7 +505,7 @@ CHOOSER
 creationMode
 creationMode
 "random" "packs"
-1
+0
 
 TEXTBOX
 825
@@ -506,7 +535,22 @@ CHOOSER
 agentShape
 agentShape
 "default" "airplane" "bug" "turtle"
+0
+
+SLIDER
+37
+542
+209
+575
+pickUpFactor
+pickUpFactor
+0
+5
+5.0
+0.1
 1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
