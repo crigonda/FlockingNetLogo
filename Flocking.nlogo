@@ -11,29 +11,35 @@ turtles-own [
   ;; =======================================================
 ]
 
+globals [
+  objectColor        ;; Color of the created objects
+  defaultPatchColor  ;; Default color of the patches
+]
+
 to setup
   clear-all
   set minSpeed 0.5
   create-turtles population
     [ set color yellow - 2 + random 7  ;; random shades look nice
-      set size 1.5  ;; easier to see
+      set size 1.5                     ;; easier to see
+      set shape agentShape             ;; shapes of the turtles
       setxy random-xcor random-ycor
+      set objectColor red              ;; color of the created objects (patches)
     ]
+  ask patches [set pcolor black]
   reset-ticks
 end
 
 to go
   ask turtles [
     flock
-    undust
+    cleanObject
   ]
-  ;; the following line is used to make the turtles
-  ;; animate more smoothly.
+  ;; WITH smooth movement animation
   repeat 5 [ ask turtles [ fd (intensity / 5) ] display ]
-  ;; for greater efficiency, at the expense of smooth
-  ;; animation, substitute the following line instead:
-  ;;   ask turtles [ fd 1 ]
-  ask patches [ dust ]
+  ;; WITHOUT smooth animation (more efficient)
+  ;; ask turtles [ fd 1 ]
+  createObjects
   tick
 end
 
@@ -143,15 +149,11 @@ to-report find-flockmates ;; turtle procedure
   let refTurtle self
   ;; Getting the turtles in a given radius
   let neighbours other turtles in-radius visionDistance
-  ;;inspect self
-  ;;user-message(word "Number in radius : " count neighbours)
   ;; Then keeping only the ones in the sight field
-  let newNeighbours neighbours with [
+  let neighboursInSight neighbours with [
     subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
   ]
-  ;;user-message(word "Number in sight : " count newNeighbours)
-  ;;stop-inspecting self
-  report newNeighbours
+  report neighboursInSight
   ;; ============================================
 end
 
@@ -169,28 +171,49 @@ end
 
 ;; ======================================================================
 
-;; DUST & UNDUST
+;; CREATE AND REMOVE OBJECTS
 
-to dust
-  let rand random dustProbability
-  if pcolor = black and rand < 1 [
-    set pcolor gray
+to createObjects ;; observer procedure
+  if objectProbability > 0 [
+    if creationMode = "random" [
+      ;; Adds objects in a random way
+      ask patches [ addObject ]
+    ]
+    if creationMode = "packs" [
+      ;; Chooses n random patches and creates packs of objects around them
+      ask n-of 1 patches [ addPack ]
+    ]
   ]
 end
 
-to undust
-  if pcolor = gray [
-    set pcolor black
+to addObject ;; patch procedure
+  let rand random (50000 * (1 / objectProbability))
+  if rand < 1 [
+    set pcolor objectColor
+  ]
+end
+
+to addPack ;; patch procedure
+  let rand random (100 * (1 / objectProbability))
+  if rand < 1 [
+    set pcolor objectColor
+    ask neighbors [set pcolor objectColor]
+  ]
+end
+
+to cleanObject ;; turtle procedure
+  if pcolor = objectColor [
+    set pcolor defaultPatchColor
   ]
 end
 
 ;; ======================================================================
 @#$#@#$#@
 GRAPHICS-WINDOW
-250
-10
-755
-516
+267
+27
+772
+533
 -1
 -1
 7.0
@@ -214,10 +237,10 @@ ticks
 30.0
 
 BUTTON
-31
-93
-112
-126
+30
+151
+120
+193
 setup
 setup\nset minSpeed 0.5\nset maxSpeed 1
 NIL
@@ -231,10 +254,10 @@ NIL
 1
 
 BUTTON
-122
-93
-203
-126
+130
+151
+223
+193
 NIL
 go
 T
@@ -248,10 +271,10 @@ NIL
 0
 
 SLIDER
-9
-51
-232
-84
+18
+45
+241
+78
 population
 population
 10
@@ -263,29 +286,14 @@ NIL
 HORIZONTAL
 
 SLIDER
-35
-369
-207
-402
+37
+444
+209
+477
 repulsionFactor
 repulsionFactor
 0
-3
-1.0
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-35
-401
-207
-434
-alignmentFactor
-alignmentFactor
-0
-3
+5
 1.5
 0.1
 1
@@ -293,40 +301,55 @@ NIL
 HORIZONTAL
 
 SLIDER
-35
-434
-207
-467
-cohesionFactor
-cohesionFactor
+37
+476
+209
+509
+alignmentFactor
+alignmentFactor
 0
-3
-1.5
+5
+2.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-9
-135
-232
-168
+37
+509
+209
+542
+cohesionFactor
+cohesionFactor
+0
+5
+2.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+18
+237
+241
+270
 visionDistance
 visionDistance
 0.0
 10.0
-4.0
+3.5
 0.5
 1
 patches
 HORIZONTAL
 
 SLIDER
-9
-267
-232
-300
+18
+369
+241
+402
 maxTurn
 maxTurn
 0
@@ -338,10 +361,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-234
-232
-267
+18
+336
+241
+369
 maxSpeed
 maxSpeed
 0.5
@@ -353,28 +376,28 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-300
-232
-333
-dustProbability
-dustProbability
-1000
-10000
-10000.0
-1000
+823
+63
+1046
+96
+objectProbability
+objectProbability
+0
+20
+3.0
+1
 1
 NIL
 HORIZONTAL
 
 PLOT
-851
-95
-1349
-376
-DustEvolution
+823
+209
+1321
+490
+ObjectQuantity
 time
-dustPatches
+objectPatches
 0.0
 10.0
 0.0
@@ -383,13 +406,13 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -2674135 true "" "plot count patches with [pcolor = gray]"
+"default" 1.0 0 -2674135 true "" "plot count patches with [pcolor = objectColor]"
 
 SLIDER
-9
-168
-232
-201
+18
+270
+241
+303
 visionAngle
 visionAngle
 0
@@ -401,10 +424,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-201
-232
-234
+18
+303
+241
+336
 minSpeed
 minSpeed
 0.1
@@ -414,6 +437,76 @@ minSpeed
 1
 NIL
 HORIZONTAL
+
+TEXTBOX
+824
+25
+1047
+58
+Increase objectProbability to decrease the object creation rate
+12
+0.0
+1
+
+TEXTBOX
+75
+211
+195
+229
+Flocking parameters
+12
+0.0
+1
+
+TEXTBOX
+74
+420
+187
+438
+Force parameters
+12
+0.0
+1
+
+CHOOSER
+823
+137
+1047
+182
+creationMode
+creationMode
+"random" "packs"
+1
+
+TEXTBOX
+825
+113
+1044
+134
+Changes the way objects are created
+12
+0.0
+1
+
+TEXTBOX
+50
+21
+221
+44
+Number and shape of agents
+12
+0.0
+1
+
+CHOOSER
+18
+78
+241
+123
+agentShape
+agentShape
+"default" "airplane" "bug" "turtle"
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
