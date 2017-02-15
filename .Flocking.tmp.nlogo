@@ -72,8 +72,19 @@ to repulsionForce [neighbours] ;; turtle procedure
 end
 
 to alignmentForce [neighbours] ;; turtle procedure
+  ;;let direction 0
+  ;;let x-component sum [dx] of neighbours
+  ;;let y-component sum [dy] of neighbours
+  ;;ifelse x-component = 0 and y-component = 0
+  ;;  [ set direction heading ]
+  ;;  [ set direction atan x-component y-component ]
+  ;;set xAlignment sin direction
+  ;;set yAlignment cos direction
+
+  let direction 0
   set xAlignment sum [dx] of neighbours
   set yAlignment sum [dy] of neighbours
+
 end
 
 to cohesionForce [neighbours] ;; turtle procedure
@@ -130,7 +141,11 @@ to applyForces [neighbours] ;; turtle procedure
   let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion + pickUpFactor * yPickUp)
   ;; Computes the direction and the norm of the vector
   let norm (sqrt (xTotal ^ 2 + yTotal ^ 2))
+
+
+
   smoothTurn (atan xTotal yTotal)
+
   ;; Make the turtle move in the right direction
   if norm > maxSpeed
   [set norm maxSpeed]
@@ -141,6 +156,33 @@ end
 
 to wander ;; turtle procedure
   set intensity minSpeed
+end
+
+;; Gets the direction from a vector
+to-report computeDirection [x y]
+  let direction -1
+  let angle 0
+  ;; Right upper part
+  if x >= 0 and y > 0 [
+    set angle y / (sqrt (x ^ 2 + y ^ 2))
+    set direction (acos angle)
+  ]
+  ;; Right lower part
+  if x >= 0 and y < 0 [
+    set angle x / (sqrt (x ^ 2 + y ^ 2))
+    set direction (acos angle) + 90
+  ]
+  ;; Left lower part
+  if x < 0 and y <= 0 [
+    set angle y / (sqrt (x ^ 2 + y ^ 2))
+    set direction (acos angle) + 180
+  ]
+  ;; Left upper part
+  if x < 0 and y > 0 [
+    set angle x / (sqrt (x ^ 2 + y ^ 2))
+    set direction (acos angle) + 270
+  ]
+  report direction
 end
 
 ;; ======================================================================
@@ -360,7 +402,7 @@ cohesionFactor
 cohesionFactor
 0
 10
-2.5
+2.0
 0.1
 1
 NIL
