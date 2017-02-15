@@ -7,6 +7,8 @@ turtles-own [
   yCohesion          ;; y component of the cohesion force
   xPickUp            ;; x component of the object attraction force
   yPickUp            ;; y component of the object attraction force
+  xSort              ;; x component of the "sort" force
+  ySort              ;; y component of the "sort" force
   intensity          ;; Intensity of the total force
 ]
 
@@ -58,6 +60,10 @@ to flock  ;; turtle procedure
   [wander]
 end
 
+to wander ;; turtle procedure
+  set intensity minSpeed
+end
+
 ;; ======================================================================
 
 ;;; FORCE COMPUTATION
@@ -85,9 +91,8 @@ to cohesionForce [neighbours] ;; turtle procedure
   set yCohesion (yGravity - ycor)
 end
 
-to pickUpForce [neighbours] ;; turtle procedure
+to pickUpForce [objectives] ;; turtle procedure
   ;; The agent is attracted by the closest object
-  let objectives find-objectives
   ifelse any? objectives [
     let objective min-one-of objectives [distance myself]
     ;; Computes the attraction vector exerted by the object
@@ -99,21 +104,42 @@ to pickUpForce [neighbours] ;; turtle procedure
   ]
 end
 
-to sortForce [neighbours] ;; turtle procedure
+to sortForce [nonFlockmates] ;; turtle procedure
   ;; ====================================================================
   ;; The sort force is divided into three components. It is exerted only
   ;; by the agents bearing a different type of object :
   ;;  - Opposite of the cohesion force
   ;;  - Opposite of the alignment force
-  ;;  - "Another" to the repulsion force
+  ;;  - "Another" repulsion force
   ;; The two first components are here to cancel the effect of the basic
   ;; alignment and cohesion forcest. The third component is here to force
   ;; an agent to leave a flock where it does not belong.
   ;; ====================================================================
-
-
-
-
+  ifelse any? nonFlockmates [
+    let xTurtle xcor
+    let yTurtle ycor
+    ;; Opposite of cohesion force
+    let xGravity mean [xcor] of nonFlockmates
+    let yGravity mean [ycor] of nonFlockmates
+    set xSort (xTurtle - xGravity)
+    set ySort (yTurtle - yGravity)
+    ;; Opposite of alignment force
+    let x-component sum [dx] of nonFlockmates
+    let y-component sum [dy] of nonFlockmates
+    set xSort (xSort - x-component)
+    set ySort (ySort - y-component)
+    ;; Repulsion force
+    if repulsionSortActivated [
+      let currentTurtle self
+      set x-component sum [(1 / (distance currentTurtle + 0.1)) * (xTurtle - xcor)] of nonFlockmates
+      set y-component sum [(1 / (distance currentTurtle + 0.1)) * (yTurtle - ycor)] of nonFlockmates
+      set xSort (xSort + x-component / sqrt (x-component ^ 2 + y-component ^ 2))
+      set ySort (ySort + y-component / sqrt (x-component ^ 2 + y-component ^ 2))
+    ]
+  ] [
+    set xSort 0
+    set ySort 0
+  ]
 end
 
 ;; ======================================================================
@@ -125,9 +151,10 @@ to applyForces [neighbours] ;; turtle procedure
   alignmentForce neighbours
   cohesionForce neighbours
   pickUpForce find-objectives
+  sortForce find-nonFlockmates
   ;; Sum of the 3 vectors (plus the pick up force)
-  let xTotal (repulsionFactor * xRepulsion + alignmentFactor * xAlignment + cohesionFactor * xCohesion + pickUpFactor * xPickUp)
-  let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion + pickUpFactor * yPickUp)
+  let xTotal (repulsionFactor * xRepulsion + alignmentFactor * xAlignment + cohesionFactor * xCohesion + pickUpFactor * xPickUp + sortFactor * xSort)
+  let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion + pickUpFactor * yPickUp + sortFactor * ySort)
   ;; Computes the direction and the norm of the vector
   let norm (sqrt (xTotal ^ 2 + yTotal ^ 2))
   smoothTurn (atan xTotal yTotal)
@@ -137,10 +164,6 @@ to applyForces [neighbours] ;; turtle procedure
   if norm < minSpeed
   [set norm minSpeed]
   set intensity norm
-end
-
-to wander ;; turtle procedure
-  set intensity minSpeed
 end
 
 ;; ======================================================================
@@ -158,6 +181,19 @@ to-report find-flockmates ;; turtle procedure
   let neighbours other turtles in-radius visionDistance
   ;; Then keeping only the ones in the sight field
   let neighboursInSight neighbours with [
+    subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
+  ]
+  report neighboursInSight
+end
+
+to-report find-nonFlockmates ;; turtle procedure
+  let refHeading heading
+  let refTurtle self
+  let refColor color
+  ;; Getting the turtles with different object type, ie different color (not default color) in a given radius
+  let neighbours other turtles in-radius visionDistance with [refColor < 42 or refColor > 50 and color != refColor and (color < 42 or color > 50)]
+  let neighboursInSight neighbours with [
+  ;; Then keeping only the ones in the sight field
     subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
   ]
   report neighboursInSight
@@ -360,7 +396,7 @@ cohesionFactor
 cohesionFactor
 0
 10
-2.5
+4.0
 0.1
 1
 NIL
@@ -508,20 +544,20 @@ Force parameters
 1
 
 CHOOSER
-817
-167
-1041
-212
+818
+162
+1042
+207
 creationMode
 creationMode
 "random" "packs"
 0
 
 TEXTBOX
-819
-143
-1038
-164
+820
+138
+1039
+159
 Changes the way objects are created
 12
 0.0
@@ -571,27 +607,27 @@ typeNumber
 typeNumber
 1
 4
-1.0
+3.0
 1
 1
 NIL
 HORIZONTAL
 
 CHOOSER
-1079
-167
-1303
-212
+1062
+61
+1286
+106
 pickUpMode
 pickUpMode
 "clean" "pick-up"
-0
+1
 
 TEXTBOX
-1080
-133
-1306
-163
+1063
+27
+1289
+57
 Ojects are cleaned or picked up by the agents
 12
 0.0
@@ -606,11 +642,32 @@ sortFactor
 sortFactor
 0
 10
-0.0
+5.0
 0.1
 1
 NIL
 HORIZONTAL
+
+SWITCH
+1065
+173
+1246
+206
+repulsionSortActivated
+repulsionSortActivated
+1
+1
+-1000
+
+TEXTBOX
+1064
+124
+1214
+169
+Adds the repulsion component of the sort force
+12
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
