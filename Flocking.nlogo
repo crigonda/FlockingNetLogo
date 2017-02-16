@@ -18,6 +18,7 @@ globals [
   colorType2         ;; Color of the created objects with type 2
   colorType3         ;; Color of the created objects with type 3
   colorType4         ;; Color of the created objects with type 4
+  removedObjects     ;; Number of objects cleaned/picked-up
 ]
 
 to setColorTypes
@@ -30,6 +31,7 @@ end
 to setup
   clear-all
   set minSpeed 0.5
+  set removedObjects 0
   create-turtles population
     [ set color yellow - 2 + random 7  ;; random shades look nice
       set size 1.5                     ;; easier to see
@@ -51,6 +53,10 @@ to go
   ;; WITHOUT smooth animation (more efficient)
   ;; ask turtles [ fd 1 ]
   createObjects
+  if (limitSimulation and ticks > tickNumber) [
+    output-write (word "Removed objects : " removedObjects)
+    stop
+  ]
   tick
 end
 
@@ -78,8 +84,8 @@ to repulsionForce [neighbours] ;; turtle procedure
 end
 
 to alignmentForce [neighbours] ;; turtle procedure
-  set xAlignment sum [dx] of neighbours
-  set yAlignment sum [dy] of neighbours
+  set xAlignment mean [dx] of neighbours
+  set yAlignment mean [dy] of neighbours
 end
 
 to cohesionForce [neighbours] ;; turtle procedure
@@ -124,8 +130,8 @@ to sortForce [nonFlockmates] ;; turtle procedure
     set xSort (xTurtle - xGravity)
     set ySort (yTurtle - yGravity)
     ;; Opposite of alignment force
-    let x-component sum [dx] of nonFlockmates
-    let y-component sum [dy] of nonFlockmates
+    let x-component mean [dx] of nonFlockmates
+    let y-component mean [dy] of nonFlockmates
     set xSort (xSort - x-component)
     set ySort (ySort - y-component)
     ;; Repulsion force
@@ -157,7 +163,9 @@ to applyForces [neighbours] ;; turtle procedure
   let yTotal (repulsionFactor * yRepulsion + alignmentFactor * yAlignment + cohesionFactor * yCohesion + pickUpFactor * yPickUp + sortFactor * ySort)
   ;; Computes the direction and the norm of the vector
   let norm (sqrt (xTotal ^ 2 + yTotal ^ 2))
-  smoothTurn (atan xTotal yTotal)
+  if (xTotal != 0 or yTotal != 0) [
+    smoothTurn (atan xTotal yTotal)
+  ]
   ;; Make the turtle move in the right direction
   if norm > maxSpeed
   [set norm maxSpeed]
@@ -214,8 +222,9 @@ end
 to-report find-objectives ;; turtle procedure
   let refHeading heading
   let refTurtle self
+  let refColor color
   ;; Getting the patches with objects in a given radius
-  let objectives other patches in-radius visionDistance with [pcolor != defaultPatchColor]
+  let objectives other patches in-radius visionDistance with [pcolor != defaultPatchColor and refColor > 42 and refColor < 50]
   ;; Then keeping only the ones in the sight field
   let objectivesInSight objectives with [
     subtract-headings refHeading ([towards myself] of refTurtle) <= visionAngle
@@ -269,12 +278,14 @@ to pickUpObject ;; turtle procedure
     ;; If pick up mode is on "clean", simply changes the patch color
     if pickUpMode = "clean" [
       set pcolor defaultPatchColor
+      set removedObjects removedObjects + 1
     ]
     ;; If pick up mode is on "pick-up", changes the patch color AND the
     ;; turtle color, if the turtle is not already carrying an object
     if pickUpMode = "pick-up" and color > 42 and color < 50 [
       set color pcolor
       set pcolor defaultPatchColor
+      set removedObjects removedObjects + 1
     ]
   ]
 end
@@ -314,7 +325,7 @@ BUTTON
 115
 182
 setup
-setup\nset minSpeed 0.5\nset maxSpeed 1\nset objectProbability 0\nset typeNumber 1
+setup\nset minSpeed 0.5\nset maxSpeed 1\n;;set objectProbability 0\n;;set typeNumber 1
 NIL
 1
 T
@@ -354,7 +365,7 @@ population
 150.0
 10
 1
-NIL
+agents
 HORIZONTAL
 
 SLIDER
@@ -366,7 +377,7 @@ repulsionFactor
 repulsionFactor
 0
 10
-1.5
+3.0
 0.1
 1
 NIL
@@ -381,7 +392,7 @@ alignmentFactor
 alignmentFactor
 0
 10
-2.0
+3.0
 0.1
 1
 NIL
@@ -396,7 +407,7 @@ cohesionFactor
 cohesionFactor
 0
 10
-4.0
+2.0
 0.1
 1
 NIL
@@ -426,10 +437,10 @@ maxTurn
 maxTurn
 0
 360
-20.0
+15.0
 5
 1
-NIL
+°
 HORIZONTAL
 
 SLIDER
@@ -444,7 +455,7 @@ maxSpeed
 1.0
 0.1
 1
-NIL
+patchs/tick
 HORIZONTAL
 
 SLIDER
@@ -492,10 +503,10 @@ visionAngle
 visionAngle
 0
 180
-100.0
+90.0
 10
 1
-NIL
+°
 HORIZONTAL
 
 SLIDER
@@ -510,7 +521,7 @@ minSpeed
 0.5
 0.1
 1
-NIL
+patchs/tick
 HORIZONTAL
 
 TEXTBOX
@@ -551,7 +562,7 @@ CHOOSER
 creationMode
 creationMode
 "random" "packs"
-0
+1
 
 TEXTBOX
 820
@@ -607,7 +618,7 @@ typeNumber
 typeNumber
 1
 4
-3.0
+1.0
 1
 1
 NIL
@@ -621,7 +632,7 @@ CHOOSER
 pickUpMode
 pickUpMode
 "clean" "pick-up"
-1
+0
 
 TEXTBOX
 1063
@@ -642,7 +653,7 @@ sortFactor
 sortFactor
 0
 10
-5.0
+0.0
 0.1
 1
 NIL
@@ -660,14 +671,53 @@ repulsionSortActivated
 -1000
 
 TEXTBOX
-1064
-124
-1214
-169
-Adds the repulsion component of the sort force
+1066
+135
+1248
+180
+Activates the repulsion component of the sort force
 12
 0.0
 1
+
+INPUTBOX
+817
+562
+956
+622
+tickNumber
+5000.0
+1
+0
+Number
+
+SWITCH
+817
+529
+956
+562
+limitSimulation
+limitSimulation
+0
+1
+-1000
+
+TEXTBOX
+964
+529
+1212
+559
+Limits the simulation to a given number of ticks, and prints the number of removed objects at the end
+11
+0.0
+1
+
+OUTPUT
+955
+563
+1212
+622
+12
 
 @#$#@#$#@
 ## WHAT IS IT?
