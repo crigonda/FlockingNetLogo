@@ -19,6 +19,7 @@ globals [
   colorType3         ;; Color of the created objects with type 3
   colorType4         ;; Color of the created objects with type 4
   removedObjects     ;; Number of objects cleaned/picked-up
+  performance ;; Number of agents without flockmates from the beginning of the simulation
 ]
 
 to setColorTypes
@@ -52,11 +53,12 @@ to go
   repeat 5 [ ask turtles [ fd (intensity / 5) ] display ]
   ;; WITHOUT smooth animation (more efficient)
   ;; ask turtles [ fd 1 ]
+  ;; Creation of objects
   createObjects
-  if (limitSimulation and ticks > tickNumber) [
-    output-write (word "Removed objects : " removedObjects)
-    stop
-  ]
+  ;; Performance measure
+  performanceMeasure
+  ;; Stops the simulation if ticks limit has been reached
+  if (limitSimulation and ticks > tickNumber) [stop]
   tick
 end
 
@@ -179,10 +181,6 @@ end
 ;; HELPER PROCEDURES
 
 to-report find-flockmates ;; turtle procedure
-  ;; ======== Version WITHOUT sight field ========
-  ;; report other turtles in-radius visionDistance
-  ;; =============================================
-  ;; Version WITH sight field
   let refHeading heading
   let refTurtle self
   ;; Getting the turtles in a given radius
@@ -283,7 +281,7 @@ to pickUpObject ;; turtle procedure
     ;; If pick up mode is on "pick-up", changes the patch color AND the
     ;; turtle color, if the turtle is not already carrying an object
     if pickUpMode = "pick-up" and color > 42 and color < 50 [
-      set color pcolor
+      set color pcolor + 2
       set pcolor defaultPatchColor
       set removedObjects removedObjects + 1
     ]
@@ -291,12 +289,29 @@ to pickUpObject ;; turtle procedure
 end
 
 ;; ======================================================================
+
+;; PERFORMANCE MEASURE
+
+to performanceMeasure ;; observer procedure
+  let perf count turtles with [find-flockmates = no-turtles]
+  if performanceVersion = "mean" [
+    ;; Version using MEAN value
+    let t ticks + 1
+    set performance (performance * ((t - 1) / t) + perf / t)
+  ]
+  ;; Version using RAW value
+  if performanceVersion = "raw" [
+    set performance perf
+  ]
+end
+
+;; ======================================================================
 @#$#@#$#@
 GRAPHICS-WINDOW
-271
-38
-776
-544
+253
+10
+758
+516
 -1
 -1
 7.0
@@ -320,10 +335,10 @@ ticks
 30.0
 
 BUTTON
-25
-140
-115
-182
+19
+108
+131
+150
 setup
 setup\nset minSpeed 0.5\nset maxSpeed 1\n;;set objectProbability 0\n;;set typeNumber 1
 NIL
@@ -337,10 +352,10 @@ NIL
 1
 
 BUTTON
-125
-140
-218
-182
+130
+108
+242
+150
 NIL
 go
 T
@@ -354,10 +369,10 @@ NIL
 0
 
 SLIDER
-13
-34
-236
-67
+19
+30
+242
+63
 population
 population
 10
@@ -369,40 +384,40 @@ agents
 HORIZONTAL
 
 SLIDER
-39
-425
-211
-458
+19
+360
+242
+393
 repulsionFactor
 repulsionFactor
 0
 10
-3.0
+1.5
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-39
-457
-211
-490
+19
+393
+242
+426
 alignmentFactor
 alignmentFactor
 0
 10
-3.0
+4.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-39
-490
-211
-523
+19
+426
+242
+459
 cohesionFactor
 cohesionFactor
 0
@@ -414,40 +429,40 @@ NIL
 HORIZONTAL
 
 SLIDER
-13
-221
-236
-254
+19
+173
+242
+206
 visionDistance
 visionDistance
 0.0
 10.0
-3.5
+3.0
 0.5
 1
 patches
 HORIZONTAL
 
 SLIDER
-13
-353
-236
-386
+19
+305
+242
+338
 maxTurn
 maxTurn
 0
 360
-15.0
-5
+8.0
+1
 1
 °
 HORIZONTAL
 
 SLIDER
-13
-320
-236
-353
+19
+272
+242
+305
 maxSpeed
 maxSpeed
 0.5
@@ -459,10 +474,10 @@ patchs/tick
 HORIZONTAL
 
 SLIDER
-818
-52
-1041
-85
+770
+43
+993
+76
 objectProbability
 objectProbability
 0
@@ -474,10 +489,10 @@ NIL
 HORIZONTAL
 
 PLOT
-817
-233
-1315
-514
+770
+370
+1278
+628
 Object quantity by type
 time
 objectPatches
@@ -495,10 +510,10 @@ PENS
 "type4" 1.0 0 -2064490 true "" "plot count patches with [pcolor = colorType4]"
 
 SLIDER
-13
-254
-236
-287
+19
+206
+242
+239
 visionAngle
 visionAngle
 0
@@ -510,10 +525,10 @@ visionAngle
 HORIZONTAL
 
 SLIDER
-13
-287
-236
-320
+19
+239
+242
+272
 minSpeed
 minSpeed
 0.1
@@ -525,59 +540,59 @@ patchs/tick
 HORIZONTAL
 
 TEXTBOX
-819
-14
-1042
-47
+774
+10
+997
+43
 Probability of object creation and number of different types
 12
 0.0
 1
 
 TEXTBOX
-70
-195
-190
-213
+78
+155
+198
+173
 Flocking parameters
 12
 0.0
 1
 
 TEXTBOX
-76
-401
-189
-419
-Force parameters
+86
+342
+193
+360
+Force coefficients
 12
 0.0
 1
 
 CHOOSER
-818
-162
-1042
-207
+993
+64
+1135
+109
 creationMode
 creationMode
 "random" "packs"
-1
+0
 
 TEXTBOX
-820
-138
-1039
-159
+999
+29
+1112
+62
 Changes the way objects are created
 12
 0.0
 1
 
 TEXTBOX
-45
+47
 10
-216
+218
 33
 Number and shape of agents
 12
@@ -585,20 +600,20 @@ Number and shape of agents
 1
 
 CHOOSER
-13
-67
-236
-112
+19
+63
+242
+108
 agentShape
 agentShape
 "default" "airplane" "bug" "turtle"
 0
 
 SLIDER
-39
-523
-211
-556
+19
+459
+242
+492
 pickUpFactor
 pickUpFactor
 0
@@ -610,10 +625,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-818
-85
-1041
-118
+770
+76
+993
+109
 typeNumber
 typeNumber
 1
@@ -625,45 +640,45 @@ NIL
 HORIZONTAL
 
 CHOOSER
-1062
-61
-1286
-106
+1135
+64
+1277
+109
 pickUpMode
 pickUpMode
 "clean" "pick-up"
 0
 
 TEXTBOX
-1063
-27
-1289
-57
+1140
+29
+1276
+81
 Ojects are cleaned or picked up by the agents
 12
 0.0
 1
 
 SLIDER
-39
-556
-211
-589
+19
+492
+242
+525
 sortFactor
 sortFactor
 0
 10
-0.0
+0.1
 0.1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-1065
-173
-1246
-206
+18
+567
+241
+600
 repulsionSortActivated
 repulsionSortActivated
 1
@@ -671,53 +686,125 @@ repulsionSortActivated
 -1000
 
 TEXTBOX
-1066
-135
-1248
-180
+20
+535
+202
+580
 Activates the repulsion component of the sort force
 12
 0.0
 1
 
 INPUTBOX
-817
-562
-956
-622
+624
+550
+758
+610
 tickNumber
-5000.0
+2000.0
 1
 0
 Number
 
 SWITCH
-817
-529
-956
-562
+624
+517
+758
+550
 limitSimulation
 limitSimulation
-0
+1
 1
 -1000
 
 TEXTBOX
-964
-529
-1212
-559
-Limits the simulation to a given number of ticks, and prints the number of removed objects at the end
+630
+611
+761
+645
+Limits the simulation to a given number of ticks
 11
 0.0
 1
 
 OUTPUT
-955
-563
-1212
-622
+381
+517
+624
+610
 12
+
+BUTTON
+253
+550
+381
+583
+Performance
+clear-output\noutput-write (word \"Performance : \" performance)
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+PLOT
+770
+112
+1278
+372
+Performance measure : alone agents
+time
+agents alone
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"performance" 1.0 0 -2674135 true "" "plot performance"
+
+TEXTBOX
+387
+612
+615
+640
+Display performance measure or number of removed objects
+11
+0.0
+1
+
+BUTTON
+253
+517
+381
+550
+Removed objects
+clear-output\noutput-write (word \"Removed objects : \" removedObjects)
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+CHOOSER
+253
+583
+381
+628
+performanceVersion
+performanceVersion
+"mean" "raw"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
